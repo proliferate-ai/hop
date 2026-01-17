@@ -1,6 +1,6 @@
-# Hop
+# Todos
 
-A simple link shortener built with Next.js, Prisma, and SQLite.
+A simple todo list app built with Next.js, Prisma, and SQLite.
 
 ## Quick Start
 
@@ -19,26 +19,30 @@ Open [http://localhost:3000](http://localhost:3000).
 - **SQLite** - File-based database
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI components
+- **Sentry** - Error tracking
 
 ## Features
 
-- Create short links with custom or auto-generated slugs
-- Click tracking and analytics
-- Copy short URLs to clipboard
-- Delete links
+- Add todos
+- Mark todos as complete/incomplete
+- Delete todos
+- Stats showing total, completed, remaining
 
 ## Project Structure
 
 ```
-hop/
+todos/
 ├── prisma/
-│   └── schema.prisma    # Database schema
+│   └── schema.prisma      # Todo model
 ├── src/
 │   ├── app/
-│   │   ├── api/links/   # CRUD API routes
-│   │   ├── [slug]/      # Redirect handler
-│   │   └── page.tsx     # Dashboard
-│   ├── components/ui/   # UI components
-│   └── lib/             # Utilities
+│   │   ├── api/todos/     # CRUD API routes
+│   │   └── page.tsx       # Main UI
+│   ├── components/ui/     # UI components
+│   └── lib/               # Utilities
 └── package.json
 ```
+
+## Sentry Setup
+
+Copy `.env.example` to `.env.local` and fill in your Sentry credentials.

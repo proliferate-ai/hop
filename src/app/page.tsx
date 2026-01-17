@@ -3,224 +3,148 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LinkIcon, BarChart3, Copy, ExternalLink, Trash2, Plus } from "lucide-react";
-import { formatNumber } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle2, Circle, Trash2, Plus, ListTodo } from "lucide-react";
 
-interface Link {
+interface Todo {
   id: string;
-  slug: string;
-  url: string;
-  title: string | null;
+  title: string;
+  completed: boolean;
   createdAt: string;
-  _count: {
-    clicks: number;
-  };
+  completedAt: string | null;
 }
 
 export default function Home() {
-  const [links, setLinks] = useState<Link[]>([]);
-  const [url, setUrl] = useState("");
-  const [customSlug, setCustomSlug] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState("");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [newTodo, setNewTodo] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
-  const fetchLinks = async () => {
-    const response = await fetch("/api/links");
+  const fetchTodos = async () => {
+    const response = await fetch("/api/todos");
     const data = await response.json();
-    setLinks(data);
+    setTodos(data);
   };
 
   useEffect(() => {
-    fetchLinks();
+    fetchTodos();
   }, []);
 
-  const createLink = async (e: React.FormEvent) => {
+  const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsCreating(true);
+    if (!newTodo.trim()) return;
 
-    try {
-      const response = await fetch("/api/links", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, slug: customSlug || undefined }),
-      });
+    setIsAdding(true);
+    await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTodo }),
+    });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create link");
-      }
-
-      setUrl("");
-      setCustomSlug("");
-      fetchLinks();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsCreating(false);
-    }
+    setNewTodo("");
+    setIsAdding(false);
+    fetchTodos();
   };
 
-  const deleteLink = async (id: string) => {
-    await fetch(`/api/links/${id}`, { method: "DELETE" });
-    fetchLinks();
+  const toggleTodo = async (id: string, completed: boolean) => {
+    await fetch(`/api/todos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: !completed }),
+    });
+    fetchTodos();
   };
 
-  const copyToClipboard = async (slug: string, id: string) => {
-    const shortUrl = `${window.location.origin}/${slug}`;
-    await navigator.clipboard.writeText(shortUrl);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const deleteTodo = async (id: string) => {
+    await fetch(`/api/todos/${id}`, { method: "DELETE" });
+    fetchTodos();
   };
 
-  const totalClicks = links.reduce((sum, link) => sum + link._count.clicks, 0);
+  const completedCount = todos.filter((t) => t.completed).length;
+  const totalCount = todos.length;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-4xl px-4 py-12">
+      <div className="container mx-auto max-w-2xl px-4 py-12">
         {/* Header */}
-        <div className="mb-12 text-center">
-          <div className="mb-4 flex items-center justify-center gap-2">
-            <LinkIcon className="h-8 w-8" />
-            <h1 className="text-4xl font-bold">Hop</h1>
+        <div className="mb-8 text-center">
+          <div className="mb-3 flex items-center justify-center gap-2">
+            <ListTodo className="h-8 w-8" />
+            <h1 className="text-3xl font-bold">Todos</h1>
           </div>
           <p className="text-muted-foreground">
-            Create short, memorable links in seconds
+            A simple todo list to keep track of your tasks
           </p>
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Links</CardDescription>
-              <CardTitle className="text-3xl">{links.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Clicks</CardDescription>
-              <CardTitle className="text-3xl">{formatNumber(totalClicks)}</CardTitle>
-            </CardHeader>
-          </Card>
+        <div className="mb-6 flex justify-center gap-6 text-sm text-muted-foreground">
+          <span>{totalCount} total</span>
+          <span>{completedCount} completed</span>
+          <span>{totalCount - completedCount} remaining</span>
         </div>
 
-        {/* Create Link Form */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Create New Link
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createLink} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="url">Destination URL</Label>
-                <Input
-                  id="url"
-                  type="url"
-                  placeholder="https://example.com/very-long-url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slug">Custom Slug (optional)</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {typeof window !== "undefined" ? window.location.origin : ""}/
-                  </span>
-                  <Input
-                    id="slug"
-                    type="text"
-                    placeholder="my-link"
-                    value={customSlug}
-                    onChange={(e) => setCustomSlug(e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-              <Button type="submit" disabled={isCreating}>
-                {isCreating ? "Creating..." : "Create Link"}
+        {/* Add Todo Form */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <form onSubmit={addTodo} className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="What needs to be done?"
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={isAdding || !newTodo.trim()}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Links List */}
+        {/* Todo List */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Your Links
-            </CardTitle>
+            <CardTitle className="text-lg">Your Tasks</CardTitle>
           </CardHeader>
           <CardContent>
-            {links.length === 0 ? (
+            {todos.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                No links yet. Create your first one above!
+                No todos yet. Add one above to get started!
               </p>
             ) : (
-              <div className="space-y-4">
-                {links.map((link) => (
+              <div className="space-y-2">
+                {todos.map((todo) => (
                   <div
-                    key={link.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
+                    key={todo.id}
+                    className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`/${link.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline"
-                        >
-                          /{link.slug}
-                        </a>
-                        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-                          {link._count.clicks} clicks
-                        </span>
-                      </div>
-                      <p className="mt-1 truncate text-sm text-muted-foreground">
-                        {link.url}
-                      </p>
-                    </div>
-                    <div className="ml-4 flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyToClipboard(link.slug, link.id)}
-                        title="Copy short URL"
-                      >
-                        <Copy className={`h-4 w-4 ${copiedId === link.id ? "text-green-500" : ""}`} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                        title="Open destination"
-                      >
-                        <a href={link.url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteLink(link.id)}
-                        title="Delete link"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    <button
+                      onClick={() => toggleTodo(todo.id, todo.completed)}
+                      className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {todo.completed ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <Circle className="h-5 w-5" />
+                      )}
+                    </button>
+                    <span
+                      className={`flex-1 ${
+                        todo.completed
+                          ? "text-muted-foreground line-through"
+                          : ""
+                      }`}
+                    >
+                      {todo.title}
+                    </span>
+                    <button
+                      onClick={() => deleteTodo(todo.id)}
+                      className="flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
               </div>
