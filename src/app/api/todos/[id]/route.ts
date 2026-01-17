@@ -18,7 +18,7 @@ export async function PATCH(
   // Format the response with completion timestamp
   const response = {
     ...todo,
-    completedAt: todo.completedAt.toISOString(),
+    completedAt: todo.completedAt!.toISOString(),
   };
 
   return NextResponse.json(response);
