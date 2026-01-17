@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { store } from "@/lib/store";
 
 export async function GET() {
-  const todos = await prisma.todo.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-
+  const todos = store.getAll();
   return NextResponse.json(todos);
 }
 
@@ -20,11 +17,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const todo = await prisma.todo.create({
-    data: {
-      title: title.trim(),
-    },
-  });
-
+  const todo = store.create(title.trim());
   return NextResponse.json(todo, { status: 201 });
 }

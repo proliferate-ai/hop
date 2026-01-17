@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { store } from "@/lib/store";
 
 export async function PATCH(
   request: NextRequest,
@@ -9,21 +9,11 @@ export async function PATCH(
   const body = await request.json();
   const { completed, title } = body;
 
-  const updateData: { completed?: boolean; completedAt?: Date | null; title?: string } = {};
+  const todo = store.update(id, { completed, title });
 
-  if (typeof completed === "boolean") {
-    updateData.completed = completed;
-    updateData.completedAt = completed ? new Date() : null;
+  if (!todo) {
+    return NextResponse.json({ error: "Todo not found" }, { status: 404 });
   }
-
-  if (typeof title === "string") {
-    updateData.title = title.trim();
-  }
-
-  const todo = await prisma.todo.update({
-    where: { id },
-    data: updateData,
-  });
 
   return NextResponse.json(todo);
 }
@@ -34,9 +24,11 @@ export async function DELETE(
 ) {
   const { id } = await params;
 
-  await prisma.todo.delete({
-    where: { id },
-  });
+  const deleted = store.delete(id);
+
+  if (!deleted) {
+    return NextResponse.json({ error: "Todo not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ success: true });
 }

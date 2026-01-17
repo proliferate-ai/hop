@@ -22,11 +22,14 @@ This is a minimal, self-contained app designed for testing and demoing AI coding
 
 ```bash
 pnpm install
-pnpm db:push
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Deployed
+
+https://hop-getonyx.vercel.app
 
 ## Sentry Setup
 
@@ -42,7 +45,7 @@ Fill in:
 ## Stack
 
 - Next.js 15
-- Prisma + SQLite (no external DB needed)
+- In-memory storage (no database needed)
 - Tailwind + shadcn/ui
 - Sentry for error tracking
 
