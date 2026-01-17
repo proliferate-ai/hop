@@ -15,7 +15,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Todo not found" }, { status: 404 });
   }
 
-  return NextResponse.json(todo);
+  // Format the response with completion timestamp
+  const response = {
+    ...todo,
+    completedAt: todo.completedAt.toISOString(),
+  };
+
+  return NextResponse.json(response);
 }
 
 export async function DELETE(
