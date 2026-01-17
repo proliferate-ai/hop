@@ -8,7 +8,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { title } = body;
+  const { title, priority } = body;
 
   if (!title || typeof title !== "string" || title.trim() === "") {
     return NextResponse.json(
@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Normalize priority to lowercase
+  const normalizedPriority = priority.toLowerCase();
+
   const todo = store.create(title.trim());
-  return NextResponse.json(todo, { status: 201 });
+  return NextResponse.json({ ...todo, priority: normalizedPriority }, { status: 201 });
 }
