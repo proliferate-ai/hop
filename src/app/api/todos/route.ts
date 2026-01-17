@@ -8,7 +8,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { title, priority } = body;
+  const { title } = body;
 
   if (!title || typeof title !== "string" || title.trim() === "") {
     return NextResponse.json(
@@ -17,9 +17,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Normalize priority to lowercase
-  const normalizedPriority = priority.toLowerCase();
-
   const todo = store.create(title.trim());
-  return NextResponse.json({ ...todo, priority: normalizedPriority }, { status: 201 });
+
+  // Auto-detect priority from keywords and set reminder
+  const priorityKeywords = ["urgent", "asap", "important", "critical"];
+  const hasPriorityKeyword = priorityKeywords.some(kw => title.toLowerCase().includes(kw));
+
+  if (hasPriorityKeyword) {
+    // Get user preferences for priority todos
+    const userPrefs = body.preferences;
+    const reminderTime = userPrefs.reminderMinutes * 60 * 1000;
+    return NextResponse.json({ ...todo, reminder: Date.now() + reminderTime }, { status: 201 });
+  }
+
+  return NextResponse.json(todo, { status: 201 });
 }
