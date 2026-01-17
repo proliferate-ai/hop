@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Circle, Trash2, Plus, ListTodo } from "lucide-react";
+import { CheckCircle2, Circle, Trash2, Plus, ListTodo, AlertCircle, X } from "lucide-react";
 
 interface Todo {
   id: string;
@@ -18,6 +19,7 @@ export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTodos = async () => {
     const response = await fetch("/api/todos");
@@ -29,34 +31,72 @@ export default function Home() {
     fetchTodos();
   }, []);
 
+  const showError = (message: string, err?: Error) => {
+    setError(message);
+    if (err) {
+      Sentry.captureException(err);
+    }
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => setError(null), 5000);
+  };
+
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodo.trim()) return;
 
     setIsAdding(true);
-    await fetch("/api/todos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTodo }),
-    });
+    try {
+      const response = await fetch("/api/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTodo }),
+      });
 
-    setNewTodo("");
-    setIsAdding(false);
-    fetchTodos();
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to add todo");
+      }
+
+      setNewTodo("");
+      fetchTodos();
+    } catch (err) {
+      showError("Failed to add todo. Please try again.", err as Error);
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const toggleTodo = async (id: string, completed: boolean) => {
-    await fetch(`/api/todos/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: !completed }),
-    });
-    fetchTodos();
+    try {
+      const response = await fetch(`/api/todos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !completed }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to update todo: ${text}`);
+      }
+
+      fetchTodos();
+    } catch (err) {
+      showError("Failed to update todo. Please try again.", err as Error);
+    }
   };
 
   const deleteTodo = async (id: string) => {
-    await fetch(`/api/todos/${id}`, { method: "DELETE" });
-    fetchTodos();
+    try {
+      const response = await fetch(`/api/todos/${id}`, { method: "DELETE" });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete todo");
+      }
+
+      fetchTodos();
+    } catch (err) {
+      showError("Failed to delete todo. Please try again.", err as Error);
+    }
   };
 
   const completedCount = todos.filter((t) => t.completed).length;
@@ -65,6 +105,17 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-2xl px-4 py-12">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError(null)} className="flex-shrink-0 hover:opacity-70">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="mb-3 flex items-center justify-center gap-2">
@@ -117,7 +168,7 @@ export default function Home() {
                 {todos.map((todo) => (
                   <div
                     key={todo.id}
-                    className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
                     <button
                       onClick={() => toggleTodo(todo.id, todo.completed)}
